@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [master, staging, trying, release-*]
+  pull_request:
+    branches: [master, release-*]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  nix-check:
+    name: nix-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v20
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      #- uses: cachix/cachix-action@v12
+      #  with:
+      #    name: REPLACEME
+      #    authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix flake check
+
+  nix-deadnix:
+    name: nix-deadnix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v20
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@v12
+        with:
+          name: typed-command-builder
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix run github:astro/deadnix
+
+  nix-statix:
+    name: nix-statix
+    runs-on: ubunut-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v20
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@v12
+        with:
+          name: typed-command-builder
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix develop -c statix check
+
+
+  # We need some "accummulation" job here because bors fails (timeouts) to
+  # listen on matrix builds.
+  # Hence, we have some kind of dummy here that bors can listen on
+  ci-success:
+    name: CI
+    if: ${{ success() }}
+    needs:
+      - nix-check
+      - nix-deadnix
+      - nix-statix
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI succeeded
+        run: exit 0

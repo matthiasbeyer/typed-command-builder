@@ -1,0 +1,16 @@
+# Configuration for cargo-changelog
+
+# unimplemented
+add_version_date = true
+fragment_dir = ".changelogs"
+template_path = "template.md"
+edit_data = true
+edit_format = "toml"
+
+git_commit_signoff = false
+
+[header_fields]
+subject = { type = "string", required = true }
+type = { type = [ "Bugfix", "Feature", "Misc" ], required = true }
+issue = { type = "int", required = false }
+

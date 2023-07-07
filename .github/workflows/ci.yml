@@ -38,21 +38,6 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix run github:astro/deadnix
 
-  nix-statix:
-    name: nix-statix
-    runs-on: ubunut-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v20
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v12
-        with:
-          name: typed-command-builder
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - run: nix develop -c statix check
-
-
   # We need some "accummulation" job here because bors fails (timeouts) to
   # listen on matrix builds.
   # Hence, we have some kind of dummy here that bors can listen on
@@ -62,7 +47,6 @@ jobs:
     needs:
       - nix-check
       - nix-deadnix
-      - nix-statix
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded

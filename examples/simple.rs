@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use typed_command_builder::Runnable;
 use typed_command_builder::TypedCommandBuilder;
 
 #[derive(TypedCommandBuilder)]
@@ -17,7 +18,12 @@ pub fn main() {
         .file(PathBuf::from(file!()))
         .build();
 
-    let (stdout, stderr) = command.run();
+    let std::process::Output {
+        status: _,
+        stdout,
+        stderr: _,
+    } = command.output();
 
+    let stdout = String::from_utf8(stdout).unwrap();
     println!("{stdout}");
 }

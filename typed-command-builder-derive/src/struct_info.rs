@@ -56,7 +56,7 @@ impl<'a> StructInfo<'a> {
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
         let empties_tuple = type_tuple(self.included_fields().map(|_| empty_type()));
         let mut all_fields_param_type: syn::TypeParam =
-            syn::Ident::new("TypedBuilderFields", proc_macro2::Span::call_site()).into();
+            syn::Ident::new("TypedCommandBuilderFields", proc_macro2::Span::call_site()).into();
         let all_fields_param = syn::GenericParam::Type(all_fields_param_type.clone());
         all_fields_param_type.default = Some(syn::Type::Tuple(empties_tuple.clone()));
         let b_generics = {
@@ -127,7 +127,7 @@ impl<'a> StructInfo<'a> {
 
         let (b_generics_impl, b_generics_ty, b_generics_where_extras_predicates) = b_generics.split_for_impl();
         let mut b_generics_where: syn::WhereClause = syn::parse2(quote! {
-            where TypedBuilderFields: Clone
+            where TypedCommandBuilderFields: Clone
         })?;
         if let Some(predicates) = b_generics_where_extras_predicates {
             b_generics_where.predicates.extend(predicates.predicates.clone());

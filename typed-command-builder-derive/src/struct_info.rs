@@ -38,6 +38,7 @@ impl<'a> StructInfo<'a> {
             .get_name()
             .map(|name| strip_raw_ident_prefix(name.to_string()))
             .unwrap_or_else(|| strip_raw_ident_prefix(format!("{}Builder", ast.ident)));
+
         Ok(StructInfo {
             vis: &ast.vis,
             name: &ast.ident,
@@ -537,16 +538,31 @@ impl<'a> StructInfo<'a> {
         };
         let (build_method_generic, output_type, build_method_where_clause) =
             match &self.builder_attr.build_method.into {
-                IntoSetting::NoConversion => (None, quote!(#name #ty_generics), None),
-                IntoSetting::GenericConversion => (
-                    Some(quote!(<__R>)),
-                    quote!(__R),
-                    Some(quote!(where #name #ty_generics: Into<__R>)),
-                ),
+                IntoSetting::NoConversion => {
+                    let output_name = strip_raw_ident_prefix(format!("{}Command", name));
+                    (None, quote!(#output_name #ty_generics), None)
+                }
+                IntoSetting::GenericConversion => {
+                    let output_name = strip_raw_ident_prefix(format!("{}Command", name));
+
+                    (
+                        Some(quote!(<__R>)), // TODO: What to do here?
+                        quote!(#output_name),
+                        Some(quote!(where #output_name #ty_generics: Into<__R>)), // TODO: What to do here?
+                    )
+                }
                 IntoSetting::TypeConversionToSpecificType(into) => {
                     (None, into.to_token_stream(), None)
                 }
             };
+
+        let command_name = self.builder_attr.command_name.command_name.clone().unwrap(); // TODO
+        let output_backend_type = match self.builder_attr.command_backend {
+            CommandBackendAttr::Std => quote!(std::process::Command),
+
+            #[cfg(feature = "tokio")]
+            CommandBackendAttr::Tokio => quote!(tokio::process::Command),
+        };
 
         quote!(
             #[allow(dead_code, non_camel_case_types, missing_docs)]
@@ -554,6 +570,12 @@ impl<'a> StructInfo<'a> {
                 #build_method_doc
                 #[allow(clippy::default_trait_access)]
                 #build_method_visibility fn #build_method_name #build_method_generic (self) -> #output_type #build_method_where_clause {
+                    let backend = #output_backend_type::new(#command_name);
+
+                    let output = #output_type {
+                        backend,
+                    };
+
                     let ( #(#destructuring,)* ) = self.fields;
                     #( #assignments )*
 
@@ -705,6 +727,7 @@ pub struct TypeBuilderAttr<'a> {
     pub field_defaults: FieldBuilderAttr<'a>,
 
     pub command_name: CommandNameAttr,
+    pub command_backend: CommandBackendAttr,
 }
 
 impl<'a> TypeBuilderAttr<'a> {
@@ -754,6 +777,14 @@ impl<'a> TypeBuilderAttr<'a> {
                     }
                     "build_method_doc" => {
                         Err(gen_structure_depracation_error("build_method", "doc"))
+                    }
+                    "command_name" => {
+                        self.command_name.apply_meta(*assign.right)?;
+                        Ok(())
+                    }
+                    "command_backend" => {
+                        self.command_backend.apply_meta(*assign.right)?;
+                        Ok(())
                     }
                     _ => Err(Error::new_spanned(
                         &assign,
@@ -814,12 +845,6 @@ impl<'a> TypeBuilderAttr<'a> {
                         }
                         Ok(())
                     }
-                    "command_name" => {
-                        for arg in call.args {
-                            self.command_name.apply_meta(arg)?;
-                        }
-                        Ok(())
-                    }
                     _ => Err(Error::new_spanned(
                         &call.func,
                         format!("Illegal builder setting group name {subsetting_name}"),
@@ -853,7 +878,42 @@ impl CommandNameAttr {
                         format!("Unknown parameter {name:?}"),
                     )),
                 }
-            },
+            }
+            _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub enum CommandBackendAttr {
+    #[default]
+    Std,
+
+    #[cfg(feature = "tokio")]
+    Tokio,
+}
+
+impl CommandBackendAttr {
+    fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
+        match expr {
+            syn::Expr::Lit(lit) => {
+                if let syn::Lit::Str(ref s) = lit.lit {
+                    match s.value().as_ref() {
+                        "std" => *self = CommandBackendAttr::Std,
+                        #[cfg(feature = "tokio")]
+                        "tokio" => *self = CommandBackendAttr::Tokio,
+                        other => {
+                            return Err(Error::new_spanned(
+                                lit,
+                                format!("Unknown backend '{other}'"),
+                            ))
+                        }
+                    }
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(lit, format!("Expceted Literal 'std'")))
+                }
+            }
             _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
         }
     }

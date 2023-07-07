@@ -703,6 +703,8 @@ pub struct TypeBuilderAttr<'a> {
     pub build_method: BuildMethodSettings,
 
     pub field_defaults: FieldBuilderAttr<'a>,
+
+    pub command_name: CommandNameAttr,
 }
 
 impl<'a> TypeBuilderAttr<'a> {
@@ -812,12 +814,46 @@ impl<'a> TypeBuilderAttr<'a> {
                         }
                         Ok(())
                     }
+                    "command_name" => {
+                        for arg in call.args {
+                            self.command_name.apply_meta(arg)?;
+                        }
+                        Ok(())
+                    }
                     _ => Err(Error::new_spanned(
                         &call.func,
                         format!("Illegal builder setting group name {subsetting_name}"),
                     )),
                 }
             }
+            _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CommandNameAttr {
+    pub command_name: Option<syn::Expr>,
+}
+
+impl CommandNameAttr {
+    fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
+        match expr {
+            syn::Expr::Assign(assign) => {
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+
+                match name.as_str() {
+                    "command_name" => {
+                        self.command_name = Some(*assign.right);
+                        Ok(())
+                    }
+                    _ => Err(Error::new_spanned(
+                        &assign,
+                        format!("Unknown parameter {name:?}"),
+                    )),
+                }
+            },
             _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
         }
     }

@@ -4,8 +4,9 @@ use syn::parse::Error;
 
 use crate::field_info::{FieldBuilderAttr, FieldInfo};
 use crate::util::{
-    apply_subsections, empty_type, empty_type_tuple, expr_to_single_string, first_visibility, modify_types_generics_hack,
-    path_to_single_string, public_visibility, strip_raw_ident_prefix, type_tuple,
+    apply_subsections, empty_type, empty_type_tuple, expr_to_single_string, first_visibility,
+    modify_types_generics_hack, path_to_single_string, public_visibility, strip_raw_ident_prefix,
+    type_tuple,
 };
 
 #[derive(Debug)]
@@ -22,10 +23,15 @@ pub struct StructInfo<'a> {
 
 impl<'a> StructInfo<'a> {
     pub fn included_fields(&self) -> impl Iterator<Item = &FieldInfo<'a>> {
-        self.fields.iter().filter(|f| f.builder_attr.setter.skip.is_none())
+        self.fields
+            .iter()
+            .filter(|f| f.builder_attr.setter.skip.is_none())
     }
 
-    pub fn new(ast: &'a syn::DeriveInput, fields: impl Iterator<Item = &'a syn::Field>) -> Result<StructInfo<'a>, Error> {
+    pub fn new(
+        ast: &'a syn::DeriveInput,
+        fields: impl Iterator<Item = &'a syn::Field>,
+    ) -> Result<StructInfo<'a>, Error> {
         let builder_attr = TypeBuilderAttr::new(&ast.attrs)?;
         let builder_name = builder_attr
             .builder_type
@@ -42,7 +48,10 @@ impl<'a> StructInfo<'a> {
                 .collect::<Result<_, _>>()?,
             builder_attr,
             builder_name: syn::Ident::new(&builder_name, proc_macro2::Span::call_site()),
-            core: syn::Ident::new(&format!("{}_core", builder_name), proc_macro2::Span::call_site()),
+            core: syn::Ident::new(
+                &format!("{}_core", builder_name),
+                proc_macro2::Span::call_site(),
+            ),
         })
     }
 
@@ -61,7 +70,9 @@ impl<'a> StructInfo<'a> {
         all_fields_param_type.default = Some(syn::Type::Tuple(empties_tuple.clone()));
         let b_generics = {
             let mut generics = self.generics.clone();
-            generics.params.push(syn::GenericParam::Type(all_fields_param_type));
+            generics
+                .params
+                .push(syn::GenericParam::Type(all_fields_param_type));
             generics
         };
         let generics_with_empty = modify_types_generics_hack(&ty_generics, |args| {
@@ -79,7 +90,11 @@ impl<'a> StructInfo<'a> {
             syn::GenericParam::Const(_cnst) => quote!(),
         });
 
-        let builder_method_name = self.builder_attr.builder_method.get_name().unwrap_or_else(|| quote!(builder));
+        let builder_method_name = self
+            .builder_attr
+            .builder_method
+            .get_name()
+            .unwrap_or_else(|| quote!(builder));
         let builder_method_visibility = first_visibility(&[
             self.builder_attr.builder_method.vis.as_ref(),
             self.builder_attr.builder_type.vis.as_ref(),
@@ -113,7 +128,8 @@ impl<'a> StructInfo<'a> {
             )
         });
 
-        let builder_type_visibility = first_visibility(&[self.builder_attr.builder_type.vis.as_ref(), Some(vis)]);
+        let builder_type_visibility =
+            first_visibility(&[self.builder_attr.builder_type.vis.as_ref(), Some(vis)]);
         let builder_type_doc = if self.builder_attr.doc {
             self.builder_attr.builder_type.get_doc_or(|| {
                 format!(
@@ -125,12 +141,15 @@ impl<'a> StructInfo<'a> {
             quote!(#[doc(hidden)])
         };
 
-        let (b_generics_impl, b_generics_ty, b_generics_where_extras_predicates) = b_generics.split_for_impl();
+        let (b_generics_impl, b_generics_ty, b_generics_where_extras_predicates) =
+            b_generics.split_for_impl();
         let mut b_generics_where: syn::WhereClause = syn::parse2(quote! {
             where TypedCommandBuilderFields: Clone
         })?;
         if let Some(predicates) = b_generics_where_extras_predicates {
-            b_generics_where.predicates.extend(predicates.predicates.clone());
+            b_generics_where
+                .predicates
+                .extend(predicates.predicates.clone());
         }
 
         Ok(quote! {
@@ -166,7 +185,9 @@ impl<'a> StructInfo<'a> {
     }
 
     pub fn field_impl(&self, field: &FieldInfo) -> Result<TokenStream, Error> {
-        let StructInfo { ref builder_name, .. } = *self;
+        let StructInfo {
+            ref builder_name, ..
+        } = *self;
 
         let descructuring = self.included_fields().map(|f| {
             if f.ordinal == field.ordinal {
@@ -192,7 +213,9 @@ impl<'a> StructInfo<'a> {
                     let ident = type_param.ident.to_token_stream();
                     syn::parse2(ident).unwrap()
                 }
-                syn::GenericParam::Lifetime(lifetime_def) => syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone()),
+                syn::GenericParam::Lifetime(lifetime_def) => {
+                    syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone())
+                }
                 syn::GenericParam::Const(const_param) => {
                     let ident = const_param.ident.to_token_stream();
                     syn::parse2(ident).unwrap()
@@ -206,7 +229,9 @@ impl<'a> StructInfo<'a> {
             for f in self.included_fields() {
                 if f.ordinal == field.ordinal {
                     ty_generics_tuple.elems.push_value(empty_type());
-                    target_generics_tuple.elems.push_value(f.tuplized_type_ty_param());
+                    target_generics_tuple
+                        .elems
+                        .push_value(f.tuplized_type_ty_param());
                 } else {
                     generics.params.push(f.generic_ty_param());
                     let generic_argument: syn::Type = f.type_ident();
@@ -222,20 +247,33 @@ impl<'a> StructInfo<'a> {
         target_generics.push(syn::GenericArgument::Type(target_generics_tuple.into()));
         ty_generics.push(syn::GenericArgument::Type(ty_generics_tuple.into()));
         let (impl_generics, _, where_clause) = generics.split_for_impl();
-        let doc = field.builder_attr.setter.doc.as_ref().map(|doc| quote!(#[doc = #doc]));
+        let doc = field
+            .builder_attr
+            .setter
+            .doc
+            .as_ref()
+            .map(|doc| quote!(#[doc = #doc]));
         let deprecated = &field.builder_attr.deprecated;
 
         // NOTE: both auto_into and strip_option affect `arg_type` and `arg_expr`, but the order of
         // nesting is different so we have to do this little dance.
-        let arg_type = if field.builder_attr.setter.strip_option.is_some() && field.builder_attr.setter.transform.is_none() {
-            field
-                .type_from_inside_option()
-                .ok_or_else(|| Error::new_spanned(field_type, "can't `strip_option` - field is not `Option<...>`"))?
+        let arg_type = if field.builder_attr.setter.strip_option.is_some()
+            && field.builder_attr.setter.transform.is_none()
+        {
+            field.type_from_inside_option().ok_or_else(|| {
+                Error::new_spanned(
+                    field_type,
+                    "can't `strip_option` - field is not `Option<...>`",
+                )
+            })?
         } else {
             field_type
         };
         let (arg_type, arg_expr) = if field.builder_attr.setter.auto_into.is_some() {
-            (quote!(impl ::core::convert::Into<#arg_type>), quote!(#field_name.into()))
+            (
+                quote!(impl ::core::convert::Into<#arg_type>),
+                quote!(#field_name.into()),
+            )
         } else {
             (arg_type.to_token_stream(), field_name.to_token_stream())
         };
@@ -295,10 +333,13 @@ impl<'a> StructInfo<'a> {
     }
 
     pub fn required_field_impl(&self, field: &FieldInfo) -> TokenStream {
-        let StructInfo { ref builder_name, .. } = self;
+        let StructInfo {
+            ref builder_name, ..
+        } = self;
 
         let FieldInfo {
-            name: ref field_name, ..
+            name: ref field_name,
+            ..
         } = field;
         let mut builder_generics: Vec<syn::GenericArgument> = self
             .generics
@@ -309,7 +350,9 @@ impl<'a> StructInfo<'a> {
                     let ident = type_param.ident.to_token_stream();
                     syn::parse2(ident).unwrap()
                 }
-                syn::GenericParam::Lifetime(lifetime_def) => syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone()),
+                syn::GenericParam::Lifetime(lifetime_def) => {
+                    syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone())
+                }
                 syn::GenericParam::Const(const_param) => {
                     let ident = const_param.ident.to_token_stream();
                     syn::parse2(ident).unwrap()
@@ -333,7 +376,9 @@ impl<'a> StructInfo<'a> {
                 } else if f.ordinal < field.ordinal {
                     // Only add a `build` method that warns about missing `field` if `f` is set. If `f` is not set,
                     // `f`'s `build` method will warn, since it appears earlier in the argument list.
-                    builder_generics_tuple.elems.push_value(f.tuplized_type_ty_param());
+                    builder_generics_tuple
+                        .elems
+                        .push_value(f.tuplized_type_ty_param());
                 } else if f.ordinal == field.ordinal {
                     builder_generics_tuple.elems.push_value(empty_type());
                 } else {
@@ -383,11 +428,18 @@ impl<'a> StructInfo<'a> {
     }
 
     fn build_method_name(&self) -> TokenStream {
-        self.builder_attr.build_method.common.get_name().unwrap_or(quote!(build))
+        self.builder_attr
+            .build_method
+            .common
+            .get_name()
+            .unwrap_or(quote!(build))
     }
 
     fn build_method_visibility(&self) -> TokenStream {
-        first_visibility(&[self.builder_attr.build_method.common.vis.as_ref(), Some(&public_visibility())])
+        first_visibility(&[
+            self.builder_attr.build_method.common.vis.as_ref(),
+            Some(&public_visibility()),
+        ])
     }
 
     pub fn build_method_impl(&self) -> TokenStream {
@@ -414,12 +466,16 @@ impl<'a> StructInfo<'a> {
                                 },
                                 syn::PathSegment {
                                     ident: Ident::new("Optional", Span::call_site()),
-                                    arguments: syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
-                                        colon2_token: None,
-                                        lt_token: Default::default(),
-                                        args: [syn::GenericArgument::Type(field.ty.clone())].into_iter().collect(),
-                                        gt_token: Default::default(),
-                                    }),
+                                    arguments: syn::PathArguments::AngleBracketed(
+                                        syn::AngleBracketedGenericArguments {
+                                            colon2_token: None,
+                                            lt_token: Default::default(),
+                                            args: [syn::GenericArgument::Type(field.ty.clone())]
+                                                .into_iter()
+                                                .collect(),
+                                            gt_token: Default::default(),
+                                        },
+                                    ),
                                 },
                             ]
                             .into_iter()
@@ -481,15 +537,18 @@ impl<'a> StructInfo<'a> {
         } else {
             quote!()
         };
-        let (build_method_generic, output_type, build_method_where_clause) = match &self.builder_attr.build_method.into {
-            IntoSetting::NoConversion => (None, quote!(#name #ty_generics), None),
-            IntoSetting::GenericConversion => (
-                Some(quote!(<__R>)),
-                quote!(__R),
-                Some(quote!(where #name #ty_generics: Into<__R>)),
-            ),
-            IntoSetting::TypeConversionToSpecificType(into) => (None, into.to_token_stream(), None),
-        };
+        let (build_method_generic, output_type, build_method_where_clause) =
+            match &self.builder_attr.build_method.into {
+                IntoSetting::NoConversion => (None, quote!(#name #ty_generics), None),
+                IntoSetting::GenericConversion => (
+                    Some(quote!(<__R>)),
+                    quote!(__R),
+                    Some(quote!(where #name #ty_generics: Into<__R>)),
+                ),
+                IntoSetting::TypeConversionToSpecificType(into) => {
+                    (None, into.to_token_stream(), None)
+                }
+            };
 
         quote!(
             #[allow(dead_code, non_camel_case_types, missing_docs)]
@@ -516,17 +575,20 @@ pub struct CommonDeclarationSettings {
     pub name: Option<syn::Expr>,
     pub doc: Option<syn::Expr>,
 }
+
 impl CommonDeclarationSettings {
     fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
         match expr {
             syn::Expr::Assign(assign) => {
-                let name =
-                    expr_to_single_string(&assign.left).ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
                 match name.as_str() {
                     "vis" => {
                         if let syn::Expr::Lit(expr_lit) = &*assign.right {
                             if let syn::Lit::Str(ref s) = expr_lit.lit {
-                                self.vis = Some(syn::parse_str(&s.value()).expect("invalid visibility found"));
+                                self.vis = Some(
+                                    syn::parse_str(&s.value()).expect("invalid visibility found"),
+                                );
                             }
                         }
                         if self.vis.is_none() {
@@ -542,7 +604,10 @@ impl CommonDeclarationSettings {
                         self.doc = Some(*assign.right);
                         Ok(())
                     }
-                    _ => Err(Error::new_spanned(&assign, format!("Unknown parameter {:?}", name))),
+                    _ => Err(Error::new_spanned(
+                        &assign,
+                        format!("Unknown parameter {:?}", name),
+                    )),
                 }
             }
             _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
@@ -592,12 +657,17 @@ impl BuildMethodSettings {
     fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
         match &expr {
             syn::Expr::Assign(assign) => {
-                let name =
-                    expr_to_single_string(&assign.left).ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
                 if name.as_str() == "into" {
                     let expr_path = match assign.right.as_ref() {
                         syn::Expr::Path(expr_path) => expr_path,
-                        _ => return Err(Error::new_spanned(&assign.right, "Expected path expression type")),
+                        _ => {
+                            return Err(Error::new_spanned(
+                                &assign.right,
+                                "Expected path expression type",
+                            ))
+                        }
                     };
                     self.into = IntoSetting::TypeConversionToSpecificType(expr_path.clone());
                     Ok(())
@@ -606,7 +676,8 @@ impl BuildMethodSettings {
                 }
             }
             syn::Expr::Path(path) => {
-                let name = path_to_single_string(&path.path).ok_or_else(|| Error::new_spanned(path, "Expected identifier"))?;
+                let name = path_to_single_string(&path.path)
+                    .ok_or_else(|| Error::new_spanned(path, "Expected identifier"))?;
                 if name.as_str() == "into" {
                     self.into = IntoSetting::GenericConversion;
                     Ok(())
@@ -665,8 +736,8 @@ impl<'a> TypeBuilderAttr<'a> {
     fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
         match expr {
             syn::Expr::Assign(assign) => {
-                let name =
-                    expr_to_single_string(&assign.left).ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
 
                 let gen_structure_depracation_error = |put_under: &str, new_name: &str| {
                     Error::new_spanned(
@@ -678,20 +749,33 @@ impl<'a> TypeBuilderAttr<'a> {
                     )
                 };
                 match name.as_str() {
-                    "builder_method_doc" => Err(gen_structure_depracation_error("builder_method", "doc")),
-                    "builder_type_doc" => Err(gen_structure_depracation_error("builder_type", "doc")),
-                    "build_method_doc" => Err(gen_structure_depracation_error("build_method", "doc")),
-                    _ => Err(Error::new_spanned(&assign, format!("Unknown parameter {:?}", name))),
+                    "builder_method_doc" => {
+                        Err(gen_structure_depracation_error("builder_method", "doc"))
+                    }
+                    "builder_type_doc" => {
+                        Err(gen_structure_depracation_error("builder_type", "doc"))
+                    }
+                    "build_method_doc" => {
+                        Err(gen_structure_depracation_error("build_method", "doc"))
+                    }
+                    _ => Err(Error::new_spanned(
+                        &assign,
+                        format!("Unknown parameter {:?}", name),
+                    )),
                 }
             }
             syn::Expr::Path(path) => {
-                let name = path_to_single_string(&path.path).ok_or_else(|| Error::new_spanned(&path, "Expected identifier"))?;
+                let name = path_to_single_string(&path.path)
+                    .ok_or_else(|| Error::new_spanned(&path, "Expected identifier"))?;
                 match name.as_str() {
                     "doc" => {
                         self.doc = true;
                         Ok(())
                     }
-                    _ => Err(Error::new_spanned(&path, format!("Unknown parameter {:?}", name))),
+                    _ => Err(Error::new_spanned(
+                        &path,
+                        format!("Unknown parameter {:?}", name),
+                    )),
                 }
             }
             syn::Expr::Call(call) => {
@@ -703,7 +787,10 @@ impl<'a> TypeBuilderAttr<'a> {
                 .ok_or_else(|| {
                     let call_func = &call.func;
                     let call_func = call_func.to_token_stream();
-                    Error::new_spanned(&call.func, format!("Illegal builder setting group {}", call_func))
+                    Error::new_spanned(
+                        &call.func,
+                        format!("Illegal builder setting group {}", call_func),
+                    )
                 })?;
                 match subsetting_name.as_str() {
                     "field_defaults" => {

@@ -504,7 +504,7 @@ impl<'a> StructInfo<'a> {
             ));
         });
 
-        let descructuring = self.included_fields().map(|f| f.name);
+        let destructuring = self.included_fields().map(|f| f.name);
 
         // The default of a field can refer to earlier-defined fields, which we handle by
         // writing out a bunch of `let` statements first, which can each refer to earlier ones.
@@ -554,7 +554,7 @@ impl<'a> StructInfo<'a> {
                 #build_method_doc
                 #[allow(clippy::default_trait_access)]
                 #build_method_visibility fn #build_method_name #build_method_generic (self) -> #output_type #build_method_where_clause {
-                    let ( #(#descructuring,)* ) = self.fields;
+                    let ( #(#destructuring,)* ) = self.fields;
                     #( #assignments )*
 
                     #[allow(deprecated)]

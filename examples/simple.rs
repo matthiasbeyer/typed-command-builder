@@ -4,6 +4,7 @@ use typed_command_builder::Runnable;
 use typed_command_builder::TypedCommandBuilder;
 
 #[derive(TypedCommandBuilder)]
+#[typed_command(command_name = "cat")]
 struct CatFileCommand {
     #[command_builder(positional(name = "FILE"))]
     file: PathBuf,

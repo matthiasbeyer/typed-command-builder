@@ -91,11 +91,11 @@ impl<'a> FieldInfo<'a> {
             &self.builder_attr.setter.prefix,
             &self.builder_attr.setter.suffix,
         ) {
-            Ident::new(&format!("{}{}{}", prefix, name, suffix), Span::call_site())
+            Ident::new(&format!("{prefix}{name}{suffix}"), Span::call_site())
         } else if let Some(prefix) = &self.builder_attr.setter.prefix {
-            Ident::new(&format!("{}{}", prefix, name), Span::call_site())
+            Ident::new(&format!("{prefix}{name}"), Span::call_site())
         } else if let Some(suffix) = &self.builder_attr.setter.suffix {
-            Ident::new(&format!("{}{}", name, suffix), Span::call_site())
+            Ident::new(&format!("{name}{suffix}"), Span::call_site())
         } else {
             self.name.clone()
         }
@@ -199,7 +199,7 @@ impl<'a> FieldBuilderAttr<'a> {
                             let tokenized_code = TokenStream::from_str(&code.value())?;
                             self.default = Some(
                                 syn::parse2(tokenized_code)
-                                    .map_err(|e| Error::new_spanned(code, format!("{}", e)))?,
+                                    .map_err(|e| Error::new_spanned(code, e.to_string()))?,
                             );
                         } else {
                             return Err(Error::new_spanned(assign.right, "Expected string"));
@@ -208,7 +208,7 @@ impl<'a> FieldBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &assign,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -223,7 +223,7 @@ impl<'a> FieldBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &path,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -238,7 +238,7 @@ impl<'a> FieldBuilderAttr<'a> {
                     let call_func = call_func.to_token_stream();
                     Error::new_spanned(
                         &call.func,
-                        format!("Illegal builder setting group {}", call_func),
+                        format!("Illegal builder setting group {call_func}"),
                     )
                 })?;
                 match subsetting_name.as_ref() {
@@ -250,7 +250,7 @@ impl<'a> FieldBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &call.func,
-                        format!("Illegal builder setting group name {}", subsetting_name),
+                        format!("Illegal builder setting group name {subsetting_name}"),
                     )),
                 }
             }
@@ -347,7 +347,7 @@ impl SetterSettings {
                     }
                     _ => Err(Error::new_spanned(
                         &assign,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -370,7 +370,7 @@ impl SetterSettings {
                             )*
                             _ => Err(Error::new_spanned(
                                     &path,
-                                    format!("Unknown setter parameter {:?}", name),
+                                    format!("Unknown setter parameter {name:?}"),
                             ))
                         }
                     }

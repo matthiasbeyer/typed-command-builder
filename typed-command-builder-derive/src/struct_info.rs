@@ -49,7 +49,7 @@ impl<'a> StructInfo<'a> {
             builder_attr,
             builder_name: syn::Ident::new(&builder_name, proc_macro2::Span::call_site()),
             core: syn::Ident::new(
-                &format!("{}_core", builder_name),
+                &format!("{builder_name}_core"),
                 proc_macro2::Span::call_site(),
             ),
         })
@@ -292,13 +292,12 @@ impl<'a> StructInfo<'a> {
 
         let repeated_fields_error_type_name = syn::Ident::new(
             &format!(
-                "{}_Error_Repeated_field_{}",
-                builder_name,
+                "{builder_name}_Error_Repeated_field_{}",
                 strip_raw_ident_prefix(field_name.to_string())
             ),
             proc_macro2::Span::call_site(),
         );
-        let repeated_fields_error_message = format!("Repeated field {}", field_name);
+        let repeated_fields_error_message = format!("Repeated field {field_name}");
 
         let method_name = field.setter_method_name();
 
@@ -399,13 +398,12 @@ impl<'a> StructInfo<'a> {
 
         let early_build_error_type_name = syn::Ident::new(
             &format!(
-                "{}_Error_Missing_required_field_{}",
-                builder_name,
+                "{builder_name}_Error_Missing_required_field_{}",
                 strip_raw_ident_prefix(field_name.to_string())
             ),
             proc_macro2::Span::call_site(),
         );
-        let early_build_error_message = format!("Missing required field {}", field_name);
+        let early_build_error_message = format!("Missing required field {field_name}");
 
         let build_method_name = self.build_method_name();
         let build_method_visibility = self.build_method_visibility();
@@ -533,7 +531,7 @@ impl<'a> StructInfo<'a> {
             self.builder_attr
                 .build_method
                 .common
-                .get_doc_or(|| format!("Finalise the builder and create its [`{}`] instance", name))
+                .get_doc_or(|| format!("Finalise the builder and create its [`{name}`] instance"))
         } else {
             quote!()
         };
@@ -606,7 +604,7 @@ impl CommonDeclarationSettings {
                     }
                     _ => Err(Error::new_spanned(
                         &assign,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -742,10 +740,7 @@ impl<'a> TypeBuilderAttr<'a> {
                 let gen_structure_depracation_error = |put_under: &str, new_name: &str| {
                     Error::new_spanned(
                         &assign.left,
-                        format!(
-                            "`{} = \"...\"` is deprecated - use `{}({} = \"...\")` instead",
-                            name, put_under, new_name
-                        ),
+                        format!("`{name} = \"...\"` is deprecated - use `{put_under}({new_name} = \"...\")` instead"),
                     )
                 };
                 match name.as_str() {
@@ -760,7 +755,7 @@ impl<'a> TypeBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &assign,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -774,7 +769,7 @@ impl<'a> TypeBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &path,
-                        format!("Unknown parameter {:?}", name),
+                        format!("Unknown parameter {name:?}"),
                     )),
                 }
             }
@@ -789,7 +784,7 @@ impl<'a> TypeBuilderAttr<'a> {
                     let call_func = call_func.to_token_stream();
                     Error::new_spanned(
                         &call.func,
-                        format!("Illegal builder setting group {}", call_func),
+                        format!("Illegal builder setting group {call_func}"),
                     )
                 })?;
                 match subsetting_name.as_str() {
@@ -819,7 +814,7 @@ impl<'a> TypeBuilderAttr<'a> {
                     }
                     _ => Err(Error::new_spanned(
                         &call.func,
-                        format!("Illegal builder setting group name {}", subsetting_name),
+                        format!("Illegal builder setting group name {subsetting_name}"),
                     )),
                 }
             }

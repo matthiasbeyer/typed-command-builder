@@ -19,7 +19,17 @@ let command = CatCommand::new()
 let out = command.run().unwrap();
 ```
 
+## Attribution
+
+This crates implementation is heavily based on
+[typed-builder](https://github.com/idanarye/rust-typed-builder), authored by
+[Idan Arye](https://github.com/idanarye).
+
+A huge portion of the credit belongs to them!
+
 ## License
+
+As this crate is based on [typed-builder](https://github.com/idanarye/rust-typed-builder), it is licensed like that crate:
 
 Licensed under either of
 

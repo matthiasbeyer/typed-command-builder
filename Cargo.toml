@@ -7,3 +7,11 @@ license = "MIT/Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+typed-command-builder-derive = { path = "./typed-command-builder-derive" }
+
+tokio = { version = "1", features = ["process"], optional = true }
+async-trait = { version = "0.1", optional = true }
+
+[features]
+default = []
+tokio = ["dep:tokio", "dep:async-trait"]

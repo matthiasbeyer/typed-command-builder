@@ -643,7 +643,7 @@ impl<'a> TypeBuilderAttr<'a> {
         for attr in attrs {
             let list = match &attr.meta {
                 syn::Meta::List(list) => {
-                    if path_to_single_string(&list.path).as_deref() != Some("builder") {
+                    if path_to_single_string(&list.path).as_deref() != Some("command_builder") {
                         continue;
                     }
 

@@ -6,7 +6,7 @@ mod field_info;
 mod struct_info;
 mod util;
 
-#[proc_macro_derive(TypedCommandBuilder, attributes(builder))]
+#[proc_macro_derive(TypedCommandBuilder, attributes(command_builder))]
 pub fn derive_typed_builder(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     match impl_my_derive(&input) {

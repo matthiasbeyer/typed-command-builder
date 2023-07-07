@@ -144,7 +144,7 @@ impl<'a> FieldBuilderAttr<'a> {
                         continue;
                     }
 
-                    if path != "builder" {
+                    if path != "command_builder" {
                         continue;
                     }
 

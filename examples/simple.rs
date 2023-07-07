@@ -7,7 +7,7 @@ struct CatFileCommand {
     #[command_builder(positional, name = "FILE")]
     file: PathBuf,
 
-    #[command_builder(name = "--number")]
+    #[command_builder(default, name = "--number")]
     show_lines: bool,
 }
 

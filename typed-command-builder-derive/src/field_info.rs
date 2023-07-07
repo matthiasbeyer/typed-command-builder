@@ -128,6 +128,8 @@ pub struct FieldBuilderAttr<'a> {
     pub default: Option<syn::Expr>,
     pub deprecated: Option<&'a syn::Attribute>,
     pub setter: SetterSettings,
+    pub positional: PositionalSettings,
+    pub arg: ArgSettings,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -245,6 +247,18 @@ impl<'a> FieldBuilderAttr<'a> {
                     "setter" => {
                         for arg in call.args {
                             self.setter.apply_meta(arg)?;
+                        }
+                        Ok(())
+                    },
+                    "positional" => {
+                        for arg in call.args {
+                            self.positional.apply_meta(arg)?;
+                        }
+                        Ok(())
+                    },
+                    "arg" => {
+                        for arg in call.args {
+                            self.arg.apply_meta(arg)?;
                         }
                         Ok(())
                     }
@@ -461,4 +475,60 @@ fn parse_transform_closure(span: Span, expr: syn::Expr) -> Result<Transform, Err
         body: *closure.body,
         span,
     })
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PositionalSettings {
+    name: Option<syn::Expr>
+}
+
+impl PositionalSettings {
+    fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
+        match expr {
+            syn::Expr::Assign(assign) => {
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+
+                match name.as_str() {
+                    "name" => {
+                        self.name = Some(*assign.right);
+                        Ok(())
+                    }
+                    _ => Err(Error::new_spanned(
+                        &assign,
+                        format!("Unknown parameter {name:?}"),
+                    )),
+                }
+            },
+            _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ArgSettings {
+    name: Option<syn::Expr>
+}
+
+impl ArgSettings {
+    fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
+        match expr {
+            syn::Expr::Assign(assign) => {
+                let name = expr_to_single_string(&assign.left)
+                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
+
+                match name.as_str() {
+                    "name" => {
+                        self.name = Some(*assign.right);
+                        Ok(())
+                    }
+                    _ => Err(Error::new_spanned(
+                        &assign,
+                        format!("Unknown parameter {name:?}"),
+                    )),
+                }
+            },
+            _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
+        }
+    }
 }

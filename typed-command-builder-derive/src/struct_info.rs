@@ -864,22 +864,14 @@ pub struct CommandNameAttr {
 impl CommandNameAttr {
     fn apply_meta(&mut self, expr: syn::Expr) -> Result<(), Error> {
         match expr {
-            syn::Expr::Assign(assign) => {
-                let name = expr_to_single_string(&assign.left)
-                    .ok_or_else(|| Error::new_spanned(&assign.left, "Expected identifier"))?;
-
-                match name.as_str() {
-                    "command_name" => {
-                        self.command_name = Some(*assign.right);
-                        Ok(())
-                    }
-                    _ => Err(Error::new_spanned(
-                        &assign,
-                        format!("Unknown parameter {name:?}"),
-                    )),
-                }
+            syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(_),
+                ..
+            }) => {
+                self.command_name = Some(expr.clone());
+                Ok(())
             }
-            _ => Err(Error::new_spanned(expr, "Expected (<...>=<...>)")),
+            _ => Err(Error::new_spanned(expr, "Expected literal string")),
         }
     }
 }

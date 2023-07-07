@@ -459,7 +459,7 @@ impl<'a> StructInfo<'a> {
                             leading_colon: Some(syn::token::PathSep::default()),
                             segments: [
                                 syn::PathSegment {
-                                    ident: Ident::new("typed_builder", Span::call_site()),
+                                    ident: Ident::new("typed_command_builder", Span::call_site()),
                                     arguments: syn::PathArguments::None,
                                 },
                                 syn::PathSegment {
@@ -517,7 +517,7 @@ impl<'a> StructInfo<'a> {
                 if field.builder_attr.setter.skip.is_some() {
                     quote!(let #name = #default;)
                 } else {
-                    quote!(let #name = ::typed_builder::Optional::into_value(#name, || #default);)
+                    quote!(let #name = ::typed_command_builder::Optional::into_value(#name, || #default);)
                 }
             } else {
                 quote!(let #name = #name.0;)

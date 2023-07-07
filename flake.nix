@@ -27,7 +27,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, crane, flake-utils, rust-overlay, cargo-changelog, ... }:
+  outputs = { nixpkgs, crane, flake-utils, rust-overlay, cargo-changelog, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {

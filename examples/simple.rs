@@ -4,10 +4,10 @@ use typed_command_builder::TypedCommandBuilder;
 
 #[derive(TypedCommandBuilder)]
 struct CatFileCommand {
-    #[command_builder(positional, name = "FILE")]
+    #[command_builder(positional(name = "FILE"))]
     file: PathBuf,
 
-    #[command_builder(default, name = "number")]
+    #[command_builder(default, arg(name = "number"))]
     show_lines: bool,
 }
 
